@@ -1,0 +1,57 @@
+
+albar@LAPTOP-KPE2403U MINGW64 ~
+$ cd "C:\Users\albar\Box\UC Berkeley\Coursework\year 2\Computational Social Sci>
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational>
+$ git clone https://github.com/neenzworld/omputational-Social-Science-Projects.>
+Cloning into 'omputational-Social-Science-Projects'...
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (3/3), done.
+error: [GLE 87] unable to get protocol information for 'C:\Users\albar\Box\UC B>
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational>
+$ mk dir "Project 1"
+bash: mk: command not found
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational>
+$ mkdir "Project 1"
+
+________________________________________________________________________
+
+
+
+
+
+
+
+
+
+albar@LAPTOP-KPE2403U MINGW64 ~
+$ cd "C:\Users\albar\Box\UC Berkeley\Coursework\year 2\Computational Social Science\Computational-Social-Science-Training-Program"
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program (new_branch)
+$ git clone https://github.com/neenzworld/omputational-Social-Science-Projects.git
+Cloning into 'omputational-Social-Science-Projects'...
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (3/3), done.
+error: [GLE 87] unable to get protocol information for 'C:\Users\albar\Box\UC Berkeley\Coursework\year 2\Computational Social Science\Computational-Social-Science-Training-Program\omputational-Social-Science-Projects\'
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program (new_branch)
+$ mk dir "Project 1"
+bash: mk: command not found
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program (new_branch)
+$ mkdir "Project 1"
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program (new_branch)
+$ cd "Project 1"
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program/Project 1 (new_branch)
+$ touch Neena1.txt
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/UC Berkeley/Coursework/year 2/Computational Social Science/Computational-Social-Science-Training-Program/Project 1 (new_branch)
+$ nano Neena1.txt
