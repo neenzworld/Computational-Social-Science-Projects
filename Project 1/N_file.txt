@@ -21,4 +21,54 @@ albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects
 $ cd '/c/Users/albar/Box/Computational-Social-Science-Projects/Project 1'
 
 albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1
+$ touch N_file.txt
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1
+$ nano N_file.txt
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1
+$ git status
+fatal: detected dubious ownership in repository at 'C:/Users/albar/Box/Computational-Social-Science-Projects'
+'C:/Users/albar/Box/Computational-Social-Science-Projects' is owned by:
+        'S-1-1-0'
+but the current user is:
+        'S-1-5-21-1446218198-628016573-60033771-1001'
+To add an exception for this directory, call:
+
+        git config --global --add safe.directory C:/Users/albar/Box/Computational-Social-Science-Projects
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1
+$  git config --global --add safe.directory C:/Users/albar/Box/Computational-Social-Science-Projects
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1 (main)
+$ git add *
+error: [GLE 87] unable to get protocol information for 'C:\Users\albar\Box\Computational-Social-Science-Projects\'
+warning: repository 'C:/Users/albar/Box/Computational-Social-Science-Projects' is incompatible with fsmonitor due to errors
+warning: in the working copy of 'Project 1/N_file.txt', LF will be replaced by CRLF the next time Git touches it
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1 (main)
+$ git commit -m "Neena's commands"
+error: [GLE 87] unable to get protocol information for 'C:\Users\albar\Box\Computational-Social-Science-Projects\'
+warning: repository 'C:/Users/albar/Box/Computational-Social-Science-Projects' is incompatible with fsmonitor due to errors
+[main ead8843] Neena's commands
+ 1 file changed, 24 insertions(+)
+ create mode 100644 Project 1/N_file.txt
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1 (main)
+$ git push
+fatal: credential-cache unavailable; no unix socket support
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (4/4), 669 bytes | 167.00 KiB/s, done.
+Total 4 (delta 0), reused 0 (delta 0), pack-reused 0
+To https://github.com/neenzworld/Computational-Social-Science-Projects.git
+   a2a3959..ead8843  main -> main
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1 (main)
+$ nano N_file.txt
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1 (main)
 $
+
