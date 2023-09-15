@@ -1,0 +1,24 @@
+
+albar@LAPTOP-KPE2403U MINGW64 ~
+$ cd "C:\Users\albar\Box"
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box
+$ git clone https://github.com/neenzworld/Computational-Social-Science-Projects.git
+Cloning into 'Computational-Social-Science-Projects'...
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (3/3), done.
+error: [GLE 87] unable to get protocol information for 'C:\Users\albar\Box\Computational-Social-Science-Projects\'
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box
+$ cd /c/Users/albar/Box/Computational-Social-Science-Projects
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects
+$ mkdir "Project 1"
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects
+$ cd '/c/Users/albar/Box/Computational-Social-Science-Projects/Project 1'
+
+albar@LAPTOP-KPE2403U MINGW64 ~/Box/Computational-Social-Science-Projects/Project 1
+$
