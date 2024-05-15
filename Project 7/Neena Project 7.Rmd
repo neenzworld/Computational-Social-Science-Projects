@@ -1,0 +1,528 @@
+---
+title: "Project 7: Difference-in-Differences and Synthetic Control"
+output: html_document
+name:   Neena
+---
+
+
+```{r}
+# Install and load packages 
+#if (!require("pacman")) install.packages("pacman")
+
+#devtools::install_github("ebenmichael/augsynth")
+
+#pacman::p_load(# Tidyverse packages including dplyr and ggplot2 
+               tidyverse,
+               ggthemes,
+               augsynth,
+               gsynth)
+
+
+```
+
+# Introduction
+
+For this project, you will explore the question of whether the Affordable Care Act increased health insurance coverage (or conversely, decreased the number of people who are uninsured). The ACA was passed in March 2010, but several of its provisions were phased in over a few years. The ACA instituted the "individual mandate" which required that all Americans must carry health insurance, or else suffer a tax penalty. There are four mechanisms for how the ACA aims to reduce the uninsured population:
+
+- Require companies with more than 50 employees to provide health insurance.
+- Build state-run healthcare markets ("exchanges") for individuals to purchase health insurance.
+- Provide subsidies to middle income individuals and families who do not qualify for employer based coverage.
+- Expand Medicaid to require that states grant eligibility to all citizens and legal residents earning up to 138\% of the federal poverty line. The federal government would initially pay 100\% of the costs of this expansion, and over a period of 5 years the burden would shift so the federal government would pay 90\% and the states would pay 10\%.
+
+In 2012, the Supreme Court heard the landmark case NFIB v. Sebelius, which principally challenged the constitutionality of the law under the theory that Congress could not institute an individual mandate. The Supreme Court ultimately upheld the individual mandate under Congress's taxation power, but struck down the requirement that states must expand Medicaid as impermissible subordination of the states to the federal government. Subsequently, several states refused to expand Medicaid when the program began on January 1, 2014. This refusal created the "Medicaid coverage gap" where there are indivudals who earn too much to qualify for Medicaid under the old standards, but too little to qualify for the ACA subsidies targeted at middle-income individuals.
+
+States that refused to expand Medicaid principally cited the cost as the primary factor. Critics pointed out however, that the decision not to expand primarily broke down along partisan lines. In the years since the initial expansion, several states have opted into the program, either because of a change in the governing party, or because voters directly approved expansion via a ballot initiative.
+
+You will explore the question of whether Medicaid expansion reduced the uninsured population in the U.S. in the 7 years since it went into effect. To address this question, you will use difference-in-differences estimation, and synthetic control.
+
+# Data
+
+The dataset you will work with has been assembled from a few different sources about Medicaid. The key variables are:
+
+- **State**: Full name of state
+- **Medicaid Expansion Adoption**: Date that the state adopted the Medicaid expansion, if it did so.
+- **Year**: Year of observation.
+- **Uninsured rate**: State uninsured rate in that year.
+
+# Exploratory Data Analysis
+
+Create plots and provide 1-2 sentence analyses to answer the following questions:
+
+- Which states had the highest uninsured rates prior to 2014? The lowest?
+- Which states were home to most uninsured Americans prior to 2014? How about in the last year in the data set? **Note**: 2010 state population is provided as a variable to answer this question. In an actual study you would likely use population estimates over time, but to simplify you can assume these numbers stay about the same.
+
+```{r}
+# set seed
+set.seed(31)
+
+# load data
+medicaid_expansion <- read_csv("/Volumes/NEENA/Project 7/data/medicaid_expansion.csv")
+```
+
+```{r}
+# highest and lowest uninsured rates
+
+library(dplyr)
+library(ggplot2)
+library(scales)  # For percent_format
+
+# Filter data for years before 2014
+medicaid_expansion_filtered <- medicaid_expansion %>%
+  filter(year < 2014)
+
+# Calculate mean uninsured rate by state
+uninsured_rates <- medicaid_expansion_filtered %>%
+  group_by(State) %>%
+  summarize(mean_uninsured_rate = mean(uninsured_rate, na.rm = TRUE))
+
+# Plot
+ggplot(data = uninsured_rates, aes(x = reorder(State, mean_uninsured_rate), y = mean_uninsured_rate, fill = mean_uninsured_rate)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_gradient(low = "lightblue", high = "pink", name = "Mean Uninsured Rate", labels = percent_format()) +  # Use gradient color scheme and include legend
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Mean Uninsured Rates in U.S. States (Before 2014)") +
+  xlab("State") +
+  ylab("Mean Uninsured Rate") +
+  geom_text(aes(label = paste0(round(mean_uninsured_rate * 100, 1), "%")), vjust = -0.5, size = 3) +  # Add data labels
+  theme(plot.title = element_text(hjust = 0.5))  # Center title
+
+
+```
+
+```{r}
+# most uninsured Americans
+
+# Calculate uninsured population by state
+medicaid_expansion <- medicaid_expansion %>% 
+  mutate(uninsured_pop = uninsured_rate * population)
+
+# Filter data for years before 2014
+medicaid_expansion_filtered <- medicaid_expansion %>% 
+  filter(year < 2014)
+
+# Summarize uninsured population by state
+uninsured_pop_by_state <- medicaid_expansion_filtered %>% 
+  group_by(State) %>% 
+  summarize(uninsured_pop = sum(uninsured_pop, na.rm = TRUE))  # Calculate total uninsured population
+
+# Plot
+ggplot(data = uninsured_pop_by_state, aes(x = reorder(State, uninsured_pop), y = uninsured_pop, fill = uninsured_pop)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_gradient(low = "lightblue", high = "pink", name = "Uninsured Population") +  # Use gradient color scheme
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("States with the Most Uninsured Americans (Before 2014)") +
+  xlab("State") +
+  ylab("Total Uninsured Population") +
+  geom_text(aes(label = format(uninsured_pop, scientific = FALSE)), vjust = -0.5, size = 3) +  # Add data labels
+  theme(plot.title = element_text(hjust = 0.5))  # Center title
+
+
+
+```
+
+```{r}
+# Load necessary packages
+library(dplyr)
+library(ggplot2)
+
+# Filter data for the year 2013
+medicaid_expansion_2013 <- medicaid_expansion %>% 
+  filter(year == 2013)
+
+# Summarize data by state
+state_summary <- medicaid_expansion_2013 %>%
+  group_by(State) %>%
+  summarize(uninsured_pop = mean(uninsured_pop, na.rm = TRUE))
+
+# Create gradient color palette
+color_palette <- scales::viridis_pal()(length(unique(state_summary$uninsured_pop)))
+
+# Create bar plot with gradient colors
+ggplot(state_summary, aes(x = reorder(State, uninsured_pop), y = uninsured_pop, fill = uninsured_pop)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradientn(colors = color_palette) +  # Gradient color scale
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Uninsured Rates in U.S. States in 2013") +
+  xlab("State") +
+  ylab("Uninsured Population") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  guides(fill = FALSE)  # Hide the fill legend for a cleaner look
+
+
+```
+
+
+
+# Difference-in-Differences Estimation
+
+## Estimate Model
+
+Do the following:
+
+- Choose a state that adopted the Medicaid expansion on January 1, 2014 and a state that did not. **Hint**: Do not pick Massachusetts as it passed a universal healthcare law in 2006, and also avoid picking a state that adopted the Medicaid expansion between 2014 and 2015.
+- Assess the parallel trends assumption for your choices using a plot. If you are not satisfied that the assumption has been met, pick another state and try again (but detail the states you tried).
+
+```{r}
+
+# Load necessary packages
+library(dplyr)
+library(ggplot2)
+library(scales)  # For percent_format
+
+# States that adopted on January 1, 2014
+adopted <- medicaid_expansion %>% 
+  filter(Date_Adopted == "2014-01-01") %>%
+  pull(State) %>%
+  unique() %>%
+  .[-which(. == "Massachusetts")]
+
+adopted_data <- medicaid_expansion %>%
+  filter(State %in% adopted)
+
+# States that have not adopted
+notAdopted <- medicaid_expansion %>% 
+  filter(is.na(Date_Adopted)) %>%
+  pull(State) %>%
+  unique()
+
+not_adopted_data <- medicaid_expansion %>%
+  filter(State %in% notAdopted)
+
+# Customize color palettes
+adopted_colors <- scales::hue_pal()(length(adopted))
+not_adopted_colors <- scales::hue_pal()(length(notAdopted))
+
+# Plot for adopted states
+ggplot(adopted_data, aes(x = year, y = uninsured_rate, color = State, label = State)) +
+  geom_line() +
+  geom_text(aes(x = 2014, y = uninsured_rate, label = State), vjust = -0.5, nudge_y = 0.1, size = 3) +  # Add state labels
+  geom_vline(xintercept = 2014, linetype = "dashed", color = "black") +
+  scale_color_manual(values = adopted_colors) +  # Use custom color palette
+  labs(x = "Year", y = "Uninsured Rate", title = "Uninsured Rates in States Adopting Medicaid Expansion") +
+  theme_minimal() +
+  guides(color = guide_legend(keywidth = 1, keyheight = 1)) +  # Adjust keyheight for more space between legend entries
+  theme(legend.position = "right")  # Position legend at the side
+
+# Plot for states that have not adopted
+ggplot(not_adopted_data, aes(x = year, y = uninsured_rate, color = State, label = State)) +
+  geom_line() +
+  geom_text(aes(x = 2014, y = uninsured_rate, label = State), vjust = -0.5, nudge_y = 0.1, size = 3) +  # Add state labels
+  geom_vline(xintercept = 2014, linetype = "dashed", color = "black") +
+  scale_color_manual(values = not_adopted_colors) +  # Use custom color palette
+  labs(x = "Year", y = "Uninsured Rate", title = "Uninsured Rates in States Not Adopting Medicaid Expansion") +
+  theme_minimal() +
+  guides(color = guide_legend(keywidth = 1, keyheight = 1)) +  # Adjust keyheight for more space between legend entries
+  theme(legend.position = "right")  # Position legend at the side
+
+
+
+
+
+
+```
+
+
+
+```{r}
+# Parallel Trends plot
+
+
+library(dplyr)
+library(ggplot2)
+
+# Filter data for specific states
+states_data <- medicaid_expansion %>% 
+  filter(State %in% c("Georgia", "California"))
+
+# Plot uninsured rates for Georgia and California
+ggplot(states_data, aes(x = year, y = uninsured_rate, color = State)) +
+  geom_line() +
+  geom_vline(xintercept = 2014, linetype = "dashed", color = "black") +
+  scale_color_manual(values = c("Georgia" = "yellow", "California" = "purple")) +  # Custom color palette
+  labs(x = "Year", y = "Uninsured Rate", 
+       title = "Uninsured Rates in Georgia and California",
+       color = "State") +  # Legend title
+  theme_minimal()
+
+
+
+```
+
+- Estimates a difference-in-differences estimate of the effect of the Medicaid expansion on the uninsured share of the population. You may follow the lab example where we estimate the differences in one pre-treatment and one post-treatment period, or take an average of the pre-treatment and post-treatment outcomes
+
+```{r}
+
+# Load necessary packages
+library(dplyr)
+library(tidyr)
+
+# Difference-in-Differences estimation - California and Georgia
+
+# create a dataset for California and Georgia
+medicaid_states <- 
+  medicaid_expansion %>%
+  filter(State %in% c("California", "Georgia")) %>%
+  filter(year >= 2009 & year <= 2012) 
+
+# pre-treatment difference
+# ----------
+pre_diff <- 
+  medicaid_states %>%
+  filter(year == 2009) %>%
+  select(State, uninsured_rate) %>%
+  pivot_wider(names_from = State, values_from = uninsured_rate) %>%
+  summarise(California - Georgia)
+  
+# post-treatment difference
+# ----------
+post_diff <- 
+  medicaid_states %>%
+  filter(year == 2012) %>%
+  select(State, uninsured_rate) %>%
+  pivot_wider(names_from = State, values_from = uninsured_rate) %>%
+  summarise(California - Georgia)
+
+# diff-in-diffs
+# ----------
+diff_in_diffs <- post_diff - pre_diff
+
+# Print the difference-in-differences result
+print(diff_in_diffs)
+
+
+
+```
+
+
+## Discussion Questions
+
+- Card/Krueger's original piece utilized the fact that towns on either side of the Delaware river are likely to be quite similar to one another in terms of demographics, economics, etc. Why is that intuition harder to replicate with this data?
+- **Answer**: 
+
+- What are the strengths and weaknesses of using the parallel trends assumption in difference-in-differences estimates?
+- **Answer**:
+
+
+
+# Synthetic Control
+
+Estimate Synthetic Control
+
+Although several states did not expand Medicaid on January 1, 2014, many did later on. In some cases, a Democratic governor was elected and pushed for a state budget that included the Medicaid expansion, whereas in others voters approved expansion via a ballot initiative. The 2018 election was a watershed moment where several Republican-leaning states elected Democratic governors and approved Medicaid expansion. In cases with a ballot initiative, the state legislature and governor still must implement the results via legislation. For instance, Idaho voters approved a Medicaid expansion in the 2018 election, but it was not implemented in the state budget until late 2019, with enrollment beginning in 2020.
+
+Do the following:
+
+- Choose a state that adopted the Medicaid expansion after January 1, 2014. Construct a non-augmented synthetic control and plot the results (both pre-treatment fit and post-treatment differences). Also report the average ATT and L2 imbalance.
+
+```{r}
+#install.packages("devtools")
+#devtools::install_github("ebenmichael/augsynth")
+library(augsynth)
+library(dplyr)
+
+# Filter the data for Nebraska
+nebraska_data <- medicaid_expansion %>%
+  filter(State == "Nebraska")
+
+# Create a treatment indicator for Nebraska in the year 2020
+#nebraska_2020 <- nebraska_data %>%
+ # mutate(treatment = ifelse(year >= 2020, 1, 0))
+
+nebraska_2020 <- medicaid_expansion %>%
+  mutate(treatment = case_when(State == "Nebraska" & as.Date(Date_Adopted) >= as.Date("2020-01-01") ~ 1,
+                               TRUE ~ 0))
+
+str(nebraska_2020)
+
+# Perform the synthetic control analysis
+syn_nebraska_2020 <- augsynth(
+  uninsured_rate ~ treatment,
+  State,
+  year,
+  nebraska_2020,
+  progfunc = "None",
+  scm = T
+)
+
+# Summary for Nebraska in the year 2020
+summary(syn_nebraska_2020)
+
+# Plot for Nebraska in the year 2020
+#plot(syn_nebraska_2020) errors plotting graph
+
+```
+#
+ 
+- Re-run the same analysis but this time use an augmentation (default choices are Ridge, Matrix Completion, and GSynth). Create the same plot and report the average ATT and L2 imbalance.
+
+```{r}
+
+
+# augmented synthetic control
+synRidge <-                              
+  augsynth(uninsured_rate ~ treatment,
+           State,
+           year,
+           nebraska_2020,
+           progfunc = "ridge",
+           scm = T)
+
+# summary 
+summary(synRidge)
+
+# plot
+plot(synRidge)
+
+```
+
+# 
+
+- Plot barplots to visualize the weights of the donors.
+
+```{r}
+# barplots of weights
+
+# For synthetic
+data.frame(syn$weights) %>%
+  tibble::rownames_to_column('State') %>%
+  ggplot() +
+  geom_bar(aes(x = State, 
+               y = syn.weights),
+           stat = 'identity') +
+  coord_flip() +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text()) +
+  ggtitle('Synthetic Control Weights') +
+  xlab('State') +
+  ylab('Weight')
+
+# For augmented synthetic 
+data.frame(synRidge$weights) %>%
+  tibble::rownames_to_column('State') %>%
+  ggplot() +
+  geom_bar(aes(x = State, y = synRidge.weights),
+           stat = 'identity') +
+  coord_flip() +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text()) +
+  ggtitle('Augmented Synthetic Control Weights') +
+  xlab('State') +
+  ylab('Weight')
+
+```
+
+
+**HINT**: Is there any preprocessing you need to do before you allow the program to automatically find weights for donor states?
+
+## Discussion Questions
+
+
+- What are the advantages and disadvantages of synthetic control compared to difference-in-differences estimators?
+- **Answer**: 
+
+- One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
+- **Answer**: 
+
+# Staggered Adoption Synthetic Control
+
+## Estimate Multisynth
+
+Do the following:
+
+- Estimate a multisynth model that treats each state individually. Choose a fraction of states that you can fit on a plot and examine their treatment effects.
+
+```{r}
+# multisynth model states
+
+# create dataset
+medicaid_expansion_multi <- medicaid_expansion
+medicaid_expansion_multi$Date_Adopted_num <- as.numeric(format(medicaid_expansion_multi$Date_Adopted, "%Y"))
+medicaid_expansion_multi <- medicaid_expansion_multi %>%
+    mutate(treatment = ifelse(year >= Date_Adopted_num, 1, 0))
+
+# staggered adoption synthetic control
+synMulti <- multisynth(uninsured_rate ~ treatment,
+                       State,
+                       year,
+                       medicaid_expansion_multi,
+                       n_leads = 6)
+
+summary(synMulti)
+synMulti_sum <- summary(synMulti)
+
+# plot
+synMulti_sum$att %>%
+  ggplot(aes(x = Time, y = Estimate, color = Level)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = 0) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        legend.position = 'None') +
+  ggtitle('Synthetic Controls for All States with Policy Adoption') +
+  xlab('Time') +
+  ylab('Expenditure on Pupil Estimate') +
+  facet_wrap(~Level)
+
+synMulti_sum$att %>%
+  filter(Level %in% c("California", "New York","Illinois", "Arkansas")) %>% 
+  ggplot(aes(x = Time, y = Estimate, color = Level)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = 0) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        legend.position = "bottom") +
+  ggtitle('Synthetic Controls for California, New York, and Illinois') +
+  xlab('Time') +
+  ylab('Expenditure on Pupil Estimate')
+```
+
+- Estimate a multisynth model using time cohorts. For the purpose of this exercise, you can simplify the treatment time so that states that adopted Medicaid expansion within the same year (i.e. all states that adopted epxansion in 2016) count for the same cohort. Plot the treatment effects for these time cohorts.
+
+```{r}
+# multisynth model time cohorts
+
+synMulti_cohort <- multisynth(uninsured_rate ~ treatment,
+                              State,
+                              year,
+                              medicaid_expansion_multi,
+                              n_leads = 6,
+                              time_cohort = TRUE)
+
+summary(synMulti_cohort)
+synMulti_cohort_sum <- summary(synMulti_cohort)
+
+# plot
+synMulti_cohort_sum$att %>%
+  ggplot(aes(x = Time, y = Estimate, color = Level)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = 0) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        legend.position = 'None') +
+  ggtitle('Synthetic Controls with Time Cohort for All States with Policy Adoption') +
+  xlab('Time') +
+  ylab('Expenditure on Pupil Estimate') +
+  facet_wrap(~Level)
+```
+
+## Discussion Questions
+
+- One feature of Medicaid is that it is jointly administered by the federal government and the states, and states have some flexibility in how they implement Medicaid. For example, during the Trump administration, several states applied for waivers where they could add work requirements to the eligibility standards (i.e. an individual needed to work for 80 hours/month to qualify for Medicaid). Given these differences, do you see evidence for the idea that different states had different treatment effect sizes?
+- **Answer**: 
+
+- Do you see evidence for the idea that early adopters of Medicaid expansion enjoyed a larger decrease in the uninsured population?
+- **Answer**: 
+
+# General Discussion Questions
+
+- Why are DiD and  synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
+- **Answer**:
+
+- What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
+- **Answer**: 
